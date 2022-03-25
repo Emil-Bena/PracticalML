@@ -1,0 +1,136 @@
+---
+title: "Practical Machine Learning"
+author: "Emil Bena"
+date: "3/24/2022"
+output:
+  html_document: default
+  pdf_document: default
+---
+$~$
+$~$
+
+Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+Data
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har. 
+
+$~$
+$~$
+
+#### Loading training data and test data
+```{r setup, cache=TRUE,message=FALSE}
+
+
+library(tidyverse)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+
+traindata <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+testdata <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+
+```
+
+
+$~$
+$~$  
+
+#### Getting dimensions and heading traindata to see the structure of data
+```{r,cache=TRUE}
+dim(traindata)
+dim(testdata)
+```
+$~$
+$~$
+
+## Cross validation
+
+$~$
+
+#### Splitting training data into training and testing set
+```{r,cache=TRUE}
+train <- createDataPartition(y=traindata$classe,p=0.8, list=F)
+training <- traindata[train,]
+testing <- traindata[-train,]
+```
+$~$
+$~$
+
+#### Removing columns unecessary for ML models, as they do not contain necessary data
+```{r,cache=TRUE}
+train2 <- training %>% select(-(1:7))
+test2 <- testing %>% select(-(1:7))
+```
+$~$
+$~$
+
+#### Removing columns with NA data 
+```{r,cache=TRUE}
+train2 <- train2[ , colSums(is.na(train2)) == 0] 
+test2 <- test2[ , colSums(is.na(train2)) == 0]
+```
+
+$~$
+$~$
+
+#### Removing columns with very low number of values that need to be removed and storing them as final sets for ML model
+```{r,cache=TRUE}
+trainfin <- train2 %>% select(-contains("kurtosis"),-contains("skewness"),-contains("amplitude"),-contains("max"),-contains("min"))
+testfin <- test2 %>% select(-contains("kurtosis"),-contains("skewness"),-contains("amplitude"),-contains("max"),-contains("min"))
+```
+
+$~$
+$~$
+
+## I decided to create two different models and use better one on the final prediction
+
+$~$
+
+### Decission Tree
+```{r,cache=TRUE}
+dtree <- rpart(classe ~ ., data=trainfin, method="class")
+pred1<- predict(dtree, testfin, type = "class")
+
+
+confusionMatrix(pred1,as.factor(testfin$classe))
+```
+
+**Decission Tree has accuracy of 0.7624** 
+
+$~$
+$~$
+
+### Random Forest
+```{r,cache=TRUE}
+rforest <- randomForest(as.factor(classe) ~. , data=trainfin, method="class")
+pred2 <- predict(rforest, testfin, type = "class")
+
+
+confusionMatrix(pred2, as.factor(testfin$classe))
+```
+
+**Random Forest has accuracy of 0.9952**
+
+$~$
+$~$
+
+## Final prediction on test data with Random Forest model
+```{r,cache=TRUE}
+
+predict(rforest, testdata, type = "class")
+
+```
+
+
